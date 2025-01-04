@@ -1,8 +1,8 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Terminal, Send, X, Bot, User } from "lucide-react"
+import { Terminal, X, Bot, User, Send } from "lucide-react"
 import { cn } from "@/lib/utils"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -13,11 +13,13 @@ interface Message {
   content: string
 }
 
-interface CodeProps {
-  node?: any
-  inline?: boolean
-  className?: string
-  children?: React.ReactNode
+const MarkdownComponents: Partial<Components> = {
+  code: ({ node, ...props }) => (
+    <code className="bg-[#333] px-1 py-0.5 rounded text-sm" {...props} />
+  ),
+  pre: ({ node, ...props }) => (
+    <pre className="bg-[#333] p-2 rounded my-2 overflow-x-auto" {...props} />
+  )
 }
 
 export default function Assistant() {
@@ -25,14 +27,8 @@ export default function Assistant() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
-
-  const handleClose = () => {
-    setIsOpen(false)
-    setMessages([])
-    setInput("")
-  }
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -42,18 +38,22 @@ export default function Assistant() {
     scrollToBottom()
   }, [messages])
 
+  const handleClose = () => {
+    setIsOpen(false)
+  }
+
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault()
     if (!input.trim() || isLoading) return
 
     const userMessage = input.trim()
     setInput("")
-    setMessages(prev => [...prev, { role: "user", content: userMessage }])
     setIsLoading(true)
 
-    try {
-      console.log("Sending message:", userMessage)
+    // 添加用户消息
+    setMessages(prev => [...prev, { role: "user" as const, content: userMessage }])
 
+    try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -63,102 +63,60 @@ export default function Assistant() {
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error("API Error:", errorText)
-        throw new Error(`Network response was not ok: ${errorText}`)
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       // 添加一个空的助手消息
-      setMessages(prev => [...prev, { role: "assistant", content: "" }])
+      setMessages(prev => [...prev, { role: "assistant" as const, content: "" }])
 
       const reader = response.body?.getReader()
       if (!reader) throw new Error("No reader available")
 
       const decoder = new TextDecoder()
-      let partialMessage = ""
+      let currentMessage = ""
 
       try {
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
 
-          // 解码新的数据块
           const chunk = decoder.decode(value)
+          console.log("Received chunk:", chunk) // 添加日志
           
-          // 处理 SSE 格式的数据
-          const lines = chunk.split('\n').filter(line => line.trim() !== '')
-          
-          for (const line of lines) {
-            // 检查是否是 SSE 数据行
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6).trim() // 移除 'data: ' 前缀并清理空白
-              
-              // 跳过特殊标记
-              if (data === '[DONE]' || !data) continue
-
-              try {
-                // 尝试解析 JSON
-                const json = JSON.parse(data)
-                
-                // 验证响应格式
-                if (json?.choices?.[0]?.delta?.content) {
-                  const text = json.choices[0].delta.content
-                  partialMessage += text
-                  
-                  // 更新最后一条消息的内容
-                  setMessages(prev => {
-                    const newMessages = [...prev]
-                    newMessages[newMessages.length - 1].content = partialMessage
-                    return newMessages
-                  })
-                }
-              } catch (e) {
-                console.error('Error parsing SSE data:', e, '\nRaw data:', data)
-                continue // 跳过错误的数据，继续处理下一行
-              }
+          currentMessage += chunk
+          // 更新最后一条消息
+          setMessages(prev => {
+            const newMessages = [...prev]
+            const lastMessage = newMessages[newMessages.length - 1]
+            if (lastMessage && lastMessage.role === "assistant") {
+              lastMessage.content = currentMessage
             }
-          }
+            return newMessages
+          })
         }
-      } catch (e) {
-        console.error("Error reading stream:", e)
-        throw e
+      } finally {
+        reader.releaseLock()
       }
     } catch (error) {
-      console.error("Error in handleSubmit:", error)
-      setMessages(prev => [...prev, { 
-        role: "assistant", 
-        content: "抱歉，发生了一些错误。请稍后再试。" 
-      }])
+      console.error("Error:", error)
+      setMessages(prev => {
+        const newMessages = [...prev]
+        const lastMessage = newMessages[newMessages.length - 1]
+        if (lastMessage && lastMessage.role === "assistant") {
+          lastMessage.content = "抱歉，发生了一些错误。请稍后再试。"
+        }
+        return newMessages
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
-  const MarkdownComponents: Components = {
-    pre: ({ node, children, ...props }) => (
-      <div className="relative my-2">
-        <pre className="bg-[#1E1E1E] p-4 rounded-lg overflow-x-auto font-mono" {...props}>
-          {children}
-        </pre>
-      </div>
-    ),
-    code: ({ node, inline, className, children, ...props }: CodeProps) => (
-      inline ? (
-        <code className="bg-[#1E1E1E] px-1 py-0.5 rounded text-sm font-mono" {...props}>
-          {children}
-        </code>
-      ) : (
-        <code className="font-mono" {...props}>
-          {children}
-        </code>
-      )
-    ),
-    p: ({ node, children, ...props }) => (
-      <p className="my-1 font-['SimSun']" {...props}>
-        {children}
-      </p>
-    ),
-  }
+  useEffect(() => {
+    if (isOpen) {
+      inputRef.current?.focus()
+    }
+  }, [isOpen])
 
   return (
     <>
@@ -172,13 +130,6 @@ export default function Assistant() {
         >
           <Terminal className="w-5 h-5" />
         </motion.button>
-        {/* 提示框 */}
-        <div className="absolute bottom-full right-0 mb-2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <div className="bg-[#333] text-gray-200 text-sm px-3 py-2 rounded-lg shadow-lg whitespace-nowrap">
-            点击这里与 AI 助手对话
-          </div>
-          <div className="absolute -bottom-1 right-4 w-2 h-2 bg-[#333] transform rotate-45"></div>
-        </div>
       </div>
 
       {/* 对话窗口 */}
@@ -222,56 +173,86 @@ export default function Assistant() {
 
             {/* 消息列表 */}
             <div className="h-[500px] overflow-y-auto p-4 space-y-4">
-              {messages.map((message, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={cn(
-                    "flex gap-3",
-                    message.role === "user" ? "justify-end" : "justify-start"
-                  )}
-                >
-                  {message.role === "assistant" && (
-                    <div className="w-8 h-8 rounded-lg bg-[#2D2D2D] flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-5 h-5 text-[#4ADE80]" />
-                    </div>
-                  )}
-                  <div
+              {messages.length === 0 ? (
+                <div className="text-center text-gray-500 mt-4 font-['SimSun']">
+                  你好！我是 AI 助手，请问有什么可以帮你的？
+                </div>
+              ) : (
+                messages.map((message, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
                     className={cn(
-                      "max-w-[80%] rounded-lg p-3 text-sm font-['SimSun']",
-                      message.role === "user"
-                        ? "bg-[#4ADE80] text-[#1E1E1E]"
-                        : "bg-[#2D2D2D] text-gray-200"
+                      "flex gap-3 items-start",
+                      message.role === "user" ? "justify-end" : "justify-start"
                     )}
                   >
-                    {message.role === "assistant" ? (
-                      <ReactMarkdown 
-                        remarkPlugins={[remarkGfm]}
-                        className="prose prose-invert prose-sm max-w-none font-['SimSun']"
-                        components={MarkdownComponents}
-                      >
-                        {message.content}
-                      </ReactMarkdown>
-                    ) : (
-                      message.content
+                    {message.role === "assistant" && (
+                      <div className="w-8 h-8 rounded-lg bg-[#2D2D2D] flex items-center justify-center flex-shrink-0">
+                        <Bot className="w-5 h-5 text-[#4ADE80]" />
+                      </div>
                     )}
-                  </div>
-                  {message.role === "user" && (
-                    <div className="w-8 h-8 rounded-lg bg-[#4ADE80] flex items-center justify-center flex-shrink-0">
-                      <User className="w-5 h-5 text-[#1E1E1E]" />
+                    <div
+                      className={cn(
+                        "max-w-[80%] rounded-lg p-3 text-sm font-['SimSun']",
+                        message.role === "user"
+                          ? "bg-[#4ADE80] text-[#1E1E1E]"
+                          : "bg-[#2D2D2D] text-gray-200"
+                      )}
+                    >
+                      {message.role === "assistant" ? (
+                        <div className="min-h-[1.5rem]">
+                          <ReactMarkdown 
+                            remarkPlugins={[remarkGfm]}
+                            className="prose prose-invert prose-sm max-w-none font-['SimSun'] break-words"
+                            components={{
+                              ...MarkdownComponents,
+                              p: ({node, ...props}) => <p className="mb-2" {...props} />,
+                              ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2" {...props} />,
+                              ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2" {...props} />,
+                              li: ({node, ...props}) => <li className="mb-1" {...props} />,
+                              code: ({node, ...props}) => (
+                                <code 
+                                  className="bg-[#333] px-1 py-0.5 rounded text-sm" 
+                                  {...props} 
+                                />
+                              ),
+                              pre: ({node, ...props}) => (
+                                <pre 
+                                  className="bg-[#333] p-2 rounded my-2 overflow-x-auto" 
+                                  {...props} 
+                                />
+                              )
+                            }}
+                          >
+                            {message.content || '正在思考...'}
+                          </ReactMarkdown>
+                        </div>
+                      ) : (
+                        <div className="whitespace-pre-wrap break-words">
+                          {message.content}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </motion.div>
-              ))}
+                    {message.role === "user" && (
+                      <div className="w-8 h-8 rounded-lg bg-[#4ADE80] flex items-center justify-center flex-shrink-0">
+                        <User className="w-5 h-5 text-[#1E1E1E]" />
+                      </div>
+                    )}
+                  </motion.div>
+                ))
+              )}
               <div ref={messagesEndRef} />
             </div>
 
             {/* 输入框 */}
             <div className="p-4 border-t border-[#333] bg-[#252525]">
-              <div className="flex items-center gap-2 px-4 py-2 bg-[#2A2A2A] rounded-lg border border-[#333] group focus-within:border-[#4ADE80]">
+              <form onSubmit={handleSubmit} className="flex items-center gap-2 px-4 py-2 bg-[#2A2A2A] rounded-lg border border-[#333] group focus-within:border-[#4ADE80]">
                 <span className="text-[#4ADE80] font-mono">❯</span>
-                <textarea
+                <input
+                  type="text"
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -281,27 +262,28 @@ export default function Assistant() {
                       handleSubmit()
                     }
                   }}
-                  placeholder="输入命令 (例如: help)"
-                  className="flex-1 bg-transparent outline-none text-sm text-gray-300 font-['SimSun'] placeholder:text-gray-600 placeholder:font-['SimSun'] resize-none"
-                  rows={1}
+                  placeholder="输入问题..."
+                  className="flex-1 min-w-0 bg-transparent outline-none text-sm text-gray-300 font-['SimSun'] placeholder:text-gray-600 placeholder:font-['SimSun']"
                   disabled={isLoading}
+                  autoComplete="off"
+                  spellCheck="false"
                 />
                 <button
-                  onClick={() => handleSubmit()}
+                  type="submit"
                   disabled={isLoading || !input.trim()}
                   className={cn(
-                    "p-1 rounded transition-colors",
+                    "p-1 rounded transition-colors flex-shrink-0",
                     "text-gray-400 hover:text-[#4ADE80]",
                     "disabled:opacity-50 disabled:cursor-not-allowed"
                   )}
                 >
                   <Send className="w-4 h-4" />
                 </button>
-              </div>
+              </form>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </>
   )
-} 
+}

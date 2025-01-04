@@ -12,14 +12,18 @@ const nextConfig = {
     ],
   },
   experimental: {
-    serverActions: true
+    serverActions: {
+      allowedOrigins: ['*'],
+      bodySizeLimit: '2mb'
+    }
   },
   typescript: {
     ignoreBuildErrors: true
   },
   eslint: {
     ignoreDuringBuilds: true
-  }
+  },
+  output: 'standalone'
 }
 
 module.exports = nextConfig 

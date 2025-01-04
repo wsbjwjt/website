@@ -1,101 +1,127 @@
 "use client"
 
-import React from "react"
 import { motion } from "framer-motion"
-import { Github, Twitter } from "lucide-react"
-import Image from "next/image"
 
-const team = [
+interface TeamMember {
+  name: string
+  title: string
+  description: string
+  avatar: string
+  command: string
+}
+
+const teamMembers: TeamMember[] = [
   {
-    name: "张三",
-    title: "创始人 & CEO",
-    avatar: "/team/member-1.jpg",
-    social: {
-      github: "https://github.com/zhangsan",
-      twitter: "https://twitter.com/zhangsan"
-    }
+    name: "Alex Chen",
+    title: "北京主理人",
+    description: "独立开发者，INTJ",
+    avatar: "/avatar/1.svg",
+    command: "$ contact --member alexchen --type 北京主理人"
   },
   {
-    name: "李四",
-    title: "CTO",
-    avatar: "/team/member-2.jpg",
-    social: {
-      github: "https://github.com/lisi",
-      twitter: "https://twitter.com/lisi"
-    }
+    name: "林晓风",
+    title: "杭州主理人",
+    description: "坚持做成就自有价值的事情",
+    avatar: "/avatar/2.svg",
+    command: "$ contact --member 林晓风 --type 杭州主理人"
   },
   {
-    name: "王五",
-    title: "产品总监",
-    avatar: "/team/member-3.jpg",
-    social: {
-      github: "https://github.com/wangwu",
-      twitter: "https://twitter.com/wangwu"
-    }
+    name: "张明远",
+    title: "上海主理人",
+    description: "企业AI数据式顾问，新范式人工智能创始人，前千亿上市科技人公司商业化负责人",
+    avatar: "/avatar/3.svg",
+    command: "$ contact --member 张明远 --type 上海主理人"
+  },
+  {
+    name: "王思哲",
+    title: "北京主理人",
+    description: "Blur.today 的founder，正在理想主义的徘徊",
+    avatar: "/avatar/4.svg",
+    command: "$ contact --member 王思哲 --type 北京主理人"
+  },
+  {
+    name: "陈云飞",
+    title: "上海主理人",
+    description: "706科技主理人，Web3 BUIDLer",
+    avatar: "/avatar/5.svg",
+    command: "$ contact --member 陈云飞 --type 上海主理人"
+  },
+  {
+    name: "吴天成",
+    title: "杭州主理人",
+    description: "一个关注AI机器人的欧式式研发",
+    avatar: "/avatar/6.svg",
+    command: "$ contact --member 吴天成 --type 杭州主理人"
+  },
+  {
+    name: "黄嘉诚",
+    title: "上海主理人",
+    description: "熵增力场创始人，用AI让人机交互感增增一样自然",
+    avatar: "/avatar/7.svg",
+    command: "$ contact --member 黄嘉诚 --type 上海主理人"
+  },
+  {
+    name: "李远航",
+    title: "北京主理人",
+    description: "来自硅谷的连续创业者，前Apple硬件工程师，微信阅读重度用户，每日有氧运动，跑步，游泳，乒乓",
+    avatar: "/avatar/8.svg",
+    command: "$ contact --member 李远航 --type 北京主理人"
   }
 ]
 
 export default function Team() {
   return (
-    <section className="bg-[#1E1E1E] py-20">
-      <div className="max-w-[1400px] mx-auto px-8">
+    <section className="py-20 bg-[#1A1A1A]" id="team">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <div className="w-2 h-2 rounded-full bg-[#4ADE80]"></div>
+          <span className="text-[#4ADE80] text-sm">核心团队</span>
+        </div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl font-bold text-white mb-4 font-mono">
-            团队介绍<span className="text-[#4ADE80]">.team()</span>
+          <h2 className="text-3xl font-bold text-white mb-4">
+            Team<span className="text-[#4ADE80]">.members()</span>
           </h2>
-          <p className="text-xl text-gray-400">
-            遇见改变世界的开发者们
-          </p>
+          <p className="text-gray-400">与优秀的人一起，做有趣的事</p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {team.map((member, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {teamMembers.map((member, index) => (
             <motion.div
               key={member.name}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-[#1A1A1A] p-6 rounded-lg border border-[#333] hover:border-[#4ADE80] transition-colors"
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+              className="bg-[#1E1E1E] rounded-lg p-6 border border-[#333] group"
             >
+              <div className="flex items-center space-x-1 mb-1 opacity-40">
+                <div className="w-2 h-2 rounded-full bg-[#FF5F56]"></div>
+                <div className="w-2 h-2 rounded-full bg-[#FFBD2E]"></div>
+                <div className="w-2 h-2 rounded-full bg-[#27C93F]"></div>
+                <span className="ml-2 text-xs text-gray-500">team-member</span>
+              </div>
               <div className="flex flex-col items-center">
-                <div className="w-24 h-24 rounded-full overflow-hidden mb-4 relative">
-                  <Image
+                <div className="w-20 h-20 rounded-full overflow-hidden mb-4 bg-opacity-20" style={{ backgroundColor: '#4ADE80' }}>
+                  <img
                     src={member.avatar}
                     alt={member.name}
-                    width={96}
-                    height={96}
-                    className="object-cover"
+                    className="w-full h-full object-contain"
                   />
                 </div>
-                <h3 className="text-white text-xl mb-1 font-mono">{member.name}</h3>
-                <p className="text-[#4ADE80] text-sm mb-4">{member.title}</p>
-                <div className="flex items-center gap-3">
-                  <motion.a
-                    href={member.social.github}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    className="w-8 h-8 bg-[#2A2A2A] rounded flex items-center justify-center text-gray-400 hover:text-[#4ADE80] transition-colors"
-                  >
-                    <Github className="w-4 h-4" />
-                  </motion.a>
-                  <motion.a
-                    href={member.social.twitter}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    className="w-8 h-8 bg-[#2A2A2A] rounded flex items-center justify-center text-gray-400 hover:text-[#4ADE80] transition-colors"
-                  >
-                    <Twitter className="w-4 h-4" />
-                  </motion.a>
+                <h3 className="text-white text-xl font-bold mb-2">{member.name}</h3>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1 h-1 rounded-full bg-[#4ADE80]"></div>
+                  <span className="text-[#4ADE80] text-sm">{member.title}</span>
+                </div>
+                <p className="text-gray-400 text-sm mb-4 text-center">{member.description}</p>
+                <div className="w-full bg-black bg-opacity-30 rounded p-2">
+                  <code className="text-[#4ADE80] text-xs font-mono">{member.command}</code>
                 </div>
               </div>
             </motion.div>

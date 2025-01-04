@@ -5,16 +5,50 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 
 const navItems = [
-  { name: "~/简介", href: "#intro" },
-  { name: "~/特色", href: "#features" },
-  { name: "~/活动", href: "#activities" },
-  { name: "~/历程", href: "#timeline" },
-  { name: "~/社区", href: "#community" },
-  { name: "~/飞书文档", href: "/docs" },
-  { name: "~/加入社区", href: "/join" },
+  { 
+    name: "~/简介", 
+    href: "/", 
+    hash: "#features-intro" 
+  },
+  { 
+    name: "~/特色", 
+    href: "/", 
+    hash: "#features" 
+  },
+  { 
+    name: "~/活动", 
+    href: "/", 
+    hash: "#activities" 
+  },
+  { 
+    name: "~/历程", 
+    href: "/", 
+    hash: "#timeline" 
+  },
+  { 
+    name: "~/社区", 
+    href: "/", 
+    hash: "#community" 
+  },
+  { 
+    name: "~/飞书文档", 
+    href: "https://docs.digitalhills.club",
+    external: true
+  },
+  { 
+    name: "~/加入社区", 
+    href: "/join"
+  },
 ]
 
 export default function Navbar() {
+  const handleScroll = (hash: string) => {
+    const element = document.querySelector(hash)
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" })
+    }
+  }
+
   return (
     <motion.nav 
       initial={{ y: -100 }}
@@ -39,13 +73,33 @@ export default function Navbar() {
 
           <div className="hidden md:flex items-center space-x-6">
             {navItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="text-gray-400 hover:text-[#4ADE80] text-sm font-mono transition-colors"
-              >
-                {item.name}
-              </Link>
+              item.external ? (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-[#4ADE80] text-sm font-mono transition-colors"
+                >
+                  {item.name}
+                </a>
+              ) : item.hash ? (
+                <button
+                  key={item.name}
+                  onClick={() => handleScroll(item.hash!)}
+                  className="text-gray-400 hover:text-[#4ADE80] text-sm font-mono transition-colors"
+                >
+                  {item.name}
+                </button>
+              ) : (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className="text-gray-400 hover:text-[#4ADE80] text-sm font-mono transition-colors"
+                >
+                  {item.name}
+                </Link>
+              )
             ))}
           </div>
 

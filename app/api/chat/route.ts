@@ -1,4 +1,4 @@
-import { OpenAIStream } from "@/lib/openai-stream"
+import { OpenAIStream } from "../../../lib/openai-stream"
 
 // 验证环境变量
 const requiredEnvVars = [
@@ -7,6 +7,7 @@ const requiredEnvVars = [
   "OPENAI_MODEL_NAME",
 ] as const
 
+// 在启动时验证环境变量
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
     throw new Error(`Missing ${envVar} environment variable`)
@@ -17,53 +18,66 @@ export const runtime = "edge"
 
 export async function POST(req: Request) {
   try {
-    const { message } = await req.json()
+    console.log("API Route: Received request")
+    console.log("Request URL:", req.url)
+    console.log("Request method:", req.method)
+    console.log("Request headers:", Object.fromEntries(req.headers.entries()))
 
-    if (!message) {
-      return new Response("Missing message in request body", { status: 400 })
+    // 验证请求方法
+    if (req.method !== "POST") {
+      return new Response(`Method ${req.method} Not Allowed`, { status: 405 })
     }
 
-    console.log("Processing chat request:", { message: message.slice(0, 100) })
-
-    const response = await fetch(`${process.env.OPENAI_API_BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_MODEL_NAME,
-        messages: [
-          {
-            role: "system",
-            content: "你是一个专业、友好的 AI 助手，可以帮助用户解答各种问题。请用简洁、准确的语言回答。",
-          },
-          {
-            role: "user",
-            content: message,
-          },
-        ],
-        temperature: 0.7,
-        stream: true,
-      }),
-    })
-
-    if (!response.ok) {
-      const error = await response.text()
-      console.error("OpenAI API error:", error)
-      return new Response(`OpenAI API error: ${error}`, { status: response.status })
+    // 验证 Content-Type
+    const contentType = req.headers.get("content-type")
+    if (!contentType?.includes("application/json")) {
+      return new Response("Content-Type must be application/json", { status: 400 })
     }
 
-    // 直接返回 OpenAI 的响应流
-    return new Response(response.body, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-      },
-    })
+    // 解析请求体
+    let body
+    try {
+      body = await req.json()
+    } catch (e) {
+      console.error("API Route: Error parsing request body:", e)
+      return new Response("Invalid JSON body", { status: 400 })
+    }
+
+    const { message } = body
+    console.log("API Route: Received message:", message)
+
+    if (!message || typeof message !== "string") {
+      console.error("API Route: Missing or invalid message in request body")
+      return new Response("Missing or invalid message in request body", { status: 400 })
+    }
+
+    console.log("API Route: Processing chat request")
+
+    try {
+      // 使用 OpenAIStream 处理请求
+      const stream = await OpenAIStream(message)
+      console.log("API Route: Stream created successfully")
+
+      // 返回流式响应
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      })
+    } catch (error) {
+      console.error("API Route: Error in OpenAIStream:", error)
+      return new Response(
+        `Error processing request: ${error instanceof Error ? error.message : "Unknown error"}`,
+        { status: 500 }
+      )
+    }
   } catch (error) {
-    console.error("Error in chat API:", error)
-    return new Response("Internal Server Error", { status: 500 })
+    console.error("API Route: Unexpected error:", error)
+    return new Response(
+      `Internal Server Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      { status: 500 }
+    )
   }
 } 

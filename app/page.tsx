@@ -1,3 +1,6 @@
+"use client"
+
+import dynamic from 'next/dynamic'
 import Navbar from "@/components/Navbar"
 import Hero from "@/components/Hero"
 import Features from "@/components/Features"
@@ -10,7 +13,11 @@ import Timeline from "@/components/Timeline"
 import Team from "@/components/Team"
 import Partners from "@/components/Partners"
 import Footer from "@/components/Footer"
-import Assistant from "@/components/Assistant"
+
+// 动态导入 Assistant 组件
+const Assistant = dynamic(() => import('@/components/Assistant'), {
+  ssr: false,
+})
 
 export default function HomePage() {
   return (
