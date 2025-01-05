@@ -43,5 +43,6 @@
       "maxDuration": 10
     }
   },
-  "outputDirectory": ".vercel/output"
+  "outputDirectory": ".vercel/output",
+  "skipSymlinks": true
 }
